@@ -2,16 +2,16 @@ Very simple Flash audio bridge.
 
 h2. Why?
 
-http://www.phoboslab.org/log/2011/03/the-state-of-html5-audio
+"The State of HTML5 Audio":http://www.phoboslab.org/log/2011/03/the-state-of-html5-audio
 
 h2. Usage
 
 @Howl.swf?manifest=mymanifest.json@
 
 Where manifest is a JSON with the format:
-
- [
- 	{'url': 'sounds/laser.mp3'},
- 	{'url': 'sounds/woosh.mp3'},
- 	{'url': 'sounds/music.mp3', 'loop': true}
- ]
+<pre>
+[
+	{'url': 'sounds/laser.mp3'},
+	{'url': 'sounds/woosh.mp3'},
+	{'url': 'sounds/music.mp3', 'loop': true}
+]
