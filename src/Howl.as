@@ -1,69 +1,79 @@
 ﻿package {
 	import by.blooddy.crypto.serialization.JSON;
 
-	import com.greensock.events.LoaderEvent;
-	import com.greensock.loading.DataLoader;
-	import com.greensock.loading.LoaderMax;
-	import com.greensock.loading.MP3Loader;
-
 	import flash.display.Sprite;
+	import flash.events.Event;
 	import flash.external.ExternalInterface;
 	import flash.media.Sound;
+	import flash.net.URLLoader;
+	import flash.net.URLRequest;
+	import flash.utils.Dictionary;
 
 	public class Howl extends Sprite {
-		protected var queue:LoaderMax;
-
 		private var _handler:String;
+		private var _sounds:Dictionary;
+		private var _loadCount:uint;
 
 		public function Howl() {
 			_handler = loaderInfo.parameters.handler || 'SoundHandler';
+			_sounds = new Dictionary();
 
 			ExternalInterface.addCallback('playSound', playSound);
 
-			queue = new LoaderMax();
-			queue.addEventListener(LoaderEvent.CHILD_COMPLETE, childCompleteHandler);
-			queue.addEventListener(LoaderEvent.COMPLETE, completeHandler);
-
-			var loader:DataLoader = new DataLoader(loaderInfo.parameters.manifest || 'manifest.json');
-			loader.addEventListener(LoaderEvent.COMPLETE, manifestCompleteHandler);
-			loader.load();
+			var loader:URLLoader = new URLLoader();
+			loader.addEventListener(Event.COMPLETE, manifestCompleteHandler);
+			loader.load(new URLRequest(loaderInfo.parameters.manifest || 'manifest.json'));
 		}
 
-		private function manifestCompleteHandler(event:LoaderEvent):void {
-			var manifest:Object = JSON.decode(event.target.content);
+		private function manifestCompleteHandler(event:Event):void {
+			var loader:URLLoader = event.target as URLLoader;
+			var manifest:Object = JSON.decode(loader.data);
+
+			_loadCount = 0;
 
 			for each (var entry:Object in manifest) {
 				var url:String = entry.url;
-				entry.autoPlay = false;
-				entry.name = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
+				var name:String = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
 
-				queue.append(new MP3Loader(url, entry));
+				var sound:SoundClip = new SoundClip();
+				sound.name = name;
+				sound.loop = entry.loop;
+				sound.addEventListener(Event.COMPLETE, soundCompleteHandler);
+				sound.load(new URLRequest(url));
+
+				_sounds[name] = sound;
+				_loadCount++;
 			}
-
-			queue.load();
 		}
 
-		public function playSound(name:String):void {
-			ExternalInterface.call('console.log', 'playSound', name);
+		public function playSound(name:String, loop:Boolean = false):void {
+			trace('playSound', name);
 
-			var loader:MP3Loader = queue.getLoader(name) as MP3Loader;
-			var sound:Sound = loader.content as Sound;
-			sound.play(0, loader.vars.loop ? 9999999 : 0);
+			var sound:Sound = _sounds[name];
+			sound.play(0, loop ? 9999999 : 0);
 		}
 
-		private function childCompleteHandler(event:LoaderEvent):void {
-			triggerEvent(event.type, event.target.name);
-		}
+		private function soundCompleteHandler(event:Event):void {
+			var sound:SoundClip = event.target as SoundClip;
+			triggerEvent(event.type, sound.name);
 
-		private function completeHandler(event:LoaderEvent):void {
-			triggerEvent(event.type);
+			if (!--_loadCount) {
+				triggerEvent(event.type);
+			}
 		}
 
 		private function triggerEvent(type:String, data:String = null):void {
 			trace('Trigger', type, data);
 
 			// SoundHandler.processEvent('childComplete', 'lydA');
-			//ExternalInterface.call(_handler + '.processEvent', type, data);
+			ExternalInterface.call(_handler + '.processEvent', type, data);
 		}
 	}
+}
+
+import flash.media.Sound;
+
+class SoundClip extends Sound {
+	public var name:String;
+	public var loop:Boolean;
 }
