@@ -15,3 +15,4 @@ Where manifest is a JSON with the format:
 	{'url': 'sounds/woosh.mp3'},
 	{'url': 'sounds/music.mp3', 'loop': true}
 ]
+</pre>
